@@ -15,14 +15,22 @@ jobs:
       name: prod
     env:
       HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+      HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
+
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v3
+      - name: Install Heroku CLI
+        run: |
+          curl https://cli-assets.heroku.com/install.sh | sh
+      - name: Install Heroku CLI
+        run: |
+          heroku login
+          heroku container:login
       - name: Build and push Docker image to Heroku
         run: |
-          heroku container:login
-          docker build -t registry.heroku.com/${{ secrets.HEROKU_APP_NAME }}/web .
-          heroku container:push -a ${{ secrets.HEROKU_APP_NAME }} web
+          docker build -t registry.heroku.com/${{ env.HEROKU_APP_NAME }}/web .
+          heroku container:push -a ${{ env.HEROKU_APP_NAME }} web
       - name: Release Heroku app
         run: |
-          heroku container:release -a ${{ secrets.HEROKU_APP_NAME }} web
+          heroku container:release -a ${{ env.HEROKU_APP_NAME }} web
