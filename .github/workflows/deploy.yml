@@ -25,7 +25,6 @@ jobs:
           curl https://cli-assets.heroku.com/install.sh | sh
       - name: Install Heroku CLI
         run: |
-          heroku login
           heroku container:login
       - name: Build and push Docker image to Heroku
         run: |
