@@ -5,14 +5,13 @@ on:
     workflows: ["lint"]  # Name of the lint workflow
     types:
       - completed
-  push:
     branches:
-      - master
+      - dev
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    needs: lint
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v3
       - name: Build and push Docker image to Heroku
