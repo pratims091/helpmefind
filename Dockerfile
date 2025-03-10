@@ -1,4 +1,4 @@
-FROM python:3.9-slim-buster
+FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
@@ -7,9 +7,6 @@ COPY Pipfile Pipfile.lock ./
 RUN pip install pipenv && pipenv install --system --deploy
 
 COPY . .
-
-RUN adduser -D myuser
-USER myuser
 
 RUN pip install gunicorn
 
