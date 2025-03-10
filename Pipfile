@@ -1,0 +1,31 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+langchain = "*"
+langchain-community = "*"
+langchainhub = "*"
+langchain-google-genai = "*"
+python-dotenv = "*"
+black = "*"
+flask = "*"
+serpapi = "*"
+google-search-results = "*"
+langchain-groq = "*"
+langchain-ollama = "*"
+diskcache = "*"
+pre-commit = "*"
+
+[dev-packages]
+ruff = "*"
+pre-commit = "*"
+
+[scripts]
+lint = "ruff check ."
+format = "ruff format ."
+check = "ruff check --fix ."
+
+[requires]
+python_version = "3.12"
