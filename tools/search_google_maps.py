@@ -134,7 +134,15 @@ def search_google_maps(search: str) -> List[Dict[str, Any]]:
     )
     for place in result["places"]:
         place_id = place["id"]
-        reviews = list(set([review["text"]["text"] for review in place["reviews"]]))
+        reviews = list(
+            set(
+                [
+                    review.get("text", {}).get("text", "")
+                    for review in place["reviews"]
+                    if "text" in review
+                ]
+            )
+        )
 
         photos = list(set([photo["name"] for photo in place["photos"]]))
         cache[f"photos_{place_id}"] = photos
