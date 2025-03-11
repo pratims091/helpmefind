@@ -5,7 +5,7 @@ import random
 import secrets
 from datetime import datetime
 from functools import wraps
-
+import os
 from flask import Flask, jsonify, render_template, request
 
 from main import helpmefind
@@ -138,4 +138,5 @@ def process():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", debug=True)
+    debug_mode = os.getenv("FLASK_DEBUG", "False").lower() in ["true", "1"]
+    app.run(host="0.0.0.0", debug=debug_mode)
