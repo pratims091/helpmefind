@@ -1,14 +1,19 @@
 """Handle place searches with CAPTCHA in a Flask app."""
 
+import asyncio
 import logging
+import os
 import random
 import secrets
 from datetime import datetime
 from functools import wraps
-import os
+
+import nest_asyncio
 from flask import Flask, jsonify, render_template, request
 
 from main import helpmefind
+
+nest_asyncio.apply()
 
 app = Flask(__name__)
 # Set a secret key for session management
@@ -126,7 +131,7 @@ def process():
         if not query or not location:
             return jsonify({"message": "Missing required parameters"}), 400
 
-        res = helpmefind(query=query, location=location)
+        res = asyncio.run(helpmefind(query=query, location=location))
         return jsonify(res.dump())
     except Exception:
         # Log the exception

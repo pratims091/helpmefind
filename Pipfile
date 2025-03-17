@@ -17,6 +17,8 @@ langchain-groq = "*"
 langchain-ollama = "*"
 diskcache = "*"
 pre-commit = "*"
+nest-asyncio = "*"
+aiohttp = "*"
 
 [dev-packages]
 ruff = "*"

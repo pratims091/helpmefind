@@ -1,10 +1,11 @@
 """Module for searching Google Maps."""
 
+import asyncio
 import json
 import os
 from typing import Any, Dict, List
 
-import requests
+import aiohttp
 from diskcache import Cache
 from dotenv import load_dotenv
 from langchain_core.tools import tool
@@ -14,7 +15,7 @@ load_dotenv()
 cache = Cache("cache")
 
 
-def api_request(
+async def api_request(
     endpoint: str,
     method: str,
     body: Dict[str, Any] = None,
@@ -28,23 +29,22 @@ def api_request(
         "X-Goog-FieldMask": response_keys,
     }
 
-    response = requests.request(
-        method,
-        url=f"{os.environ.get('GOOGLE_PLACES_BASE_URL')}{endpoint}",
-        headers=headers,
-        json=body,
-        params=params,
-    )
+    async with aiohttp.ClientSession(headers=headers) as session:
+        async with session.request(
+            method,
+            url=f"{os.environ.get('GOOGLE_PLACES_BASE_URL')}{endpoint}",
+            json=body,
+            params=params,
+        ) as response:
+            if response.status != 200:
+                print(f"Error: Received status code {response.status}")
+                print(f"Response: {await response.text()}")
+                response.raise_for_status()
 
-    if response.status_code != 200:
-        print(f"Error: Received status code {response.status_code}")
-        print(f"Response: {response.text}")
-        response.raise_for_status()
-
-    return response.json()
+            return await response.json()
 
 
-def fetch_images_for_place(place_id: str) -> List[str]:
+async def fetch_images_for_place(place_id: str) -> List[str]:
     """Fetch images for a place using its place_id."""
     mock = os.environ.get("MOCK_API_REQUESTS", "True").lower() in ("true", "1", "t")
 
@@ -59,7 +59,9 @@ def fetch_images_for_place(place_id: str) -> List[str]:
         photo_references = cache.get(f"photos_{place_id}", [])
 
         for photo_reference in photo_references:
-            photo = api_request(endpoint=f"{photo_reference}/media", method="GET", params=params)
+            photo = await api_request(
+                endpoint=f"{photo_reference}/media", method="GET", params=params
+            )
             images.append(photo["photoUri"])
 
         with open("mock_data/places_images.json", "w") as f:
@@ -68,7 +70,7 @@ def fetch_images_for_place(place_id: str) -> List[str]:
     return list(set(images))
 
 
-def inject_images_to_places(content: str) -> str:
+async def inject_images_to_places(content: str) -> str:
     """Middleware function to inject images."""
     try:
         # If content is already a dict, use it directly
@@ -90,7 +92,7 @@ def inject_images_to_places(content: str) -> str:
                 if "place_id" in place:
                     place_id = place["place_id"]
                     # Fetch images for this place
-                    images = fetch_images_for_place(place_id)
+                    images = await fetch_images_for_place(place_id)
                     place["images"] = images
 
         return json.dumps(data)
@@ -101,8 +103,7 @@ def inject_images_to_places(content: str) -> str:
         return content
 
 
-@tool
-def search_google_maps(search: str) -> List[Dict[str, Any]]:
+async def _search_google_maps_async(search: str) -> List[Dict[str, Any]]:
     """Search for places on Google Maps based on a query and location."""
     query, location = search.split("|")
     lat, long = location.split(",")
@@ -126,7 +127,7 @@ def search_google_maps(search: str) -> List[Dict[str, Any]]:
         "rankPreference": "RELEVANCE",
         "minRating": 3,
     }
-    result = api_request(
+    result = await api_request(
         endpoint="places:searchText",
         method="POST",
         body=payload,
@@ -163,3 +164,13 @@ def search_google_maps(search: str) -> List[Dict[str, Any]]:
         json.dump(places, f, indent=4)
 
     return places
+
+
+@tool
+def search_google_maps(search: str) -> List[Dict[str, Any]]:
+    """Search for places on Google Maps based on a query and location."""
+    import nest_asyncio
+
+    nest_asyncio.apply()
+    loop = asyncio.get_event_loop()
+    return loop.run_until_complete(_search_google_maps_async(search))
