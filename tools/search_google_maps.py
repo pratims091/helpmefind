@@ -145,7 +145,7 @@ async def _search_google_maps_async(search: str) -> List[Dict[str, Any]]:
             )
         )
 
-        photos = list(set([photo["name"] for photo in place["photos"]]))
+        photos = list(set([photo.get("name", "") for photo in place.get("photos", [])]))
         cache[f"photos_{place_id}"] = photos
 
         if reviews:
