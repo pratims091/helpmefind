@@ -589,11 +589,11 @@
         },
         "groq": {
             "hashes": [
-                "sha256:81d5ac00057a45d8ce559d23ab5d3b3893011d1f12c35187ab35a9182d826ea6",
-                "sha256:8e2ccfea406d68b3525af4b7c0e321fcb3d2a73fc60bb70b4156e6cd88c72f03"
+                "sha256:2a201d41cae768c53d411dabcfea2333e2e138df22d909ed555ece426f1e016f",
+                "sha256:c27b89903eb2b77f94ed95837ff3cadfc8c9e670953b1c5e5e2e855fea54b6c5"
             ],
             "markers": "python_version >= '3.8'",
-            "version": "==0.18.0"
+            "version": "==0.20.0"
         },
         "grpcio": {
             "hashes": [
@@ -777,12 +777,12 @@
         },
         "langchain-groq": {
             "hashes": [
-                "sha256:1d1635a8274228654c440a9115a32d51c4d99944f36ac3180a7c27076694036c",
-                "sha256:7f194c77bffbbaf3cf4f038d46927043e4364cca97f406a939a69be3b34ce595"
+                "sha256:38b8455870b20d585a6a79027dd9fac523bd2fea27f9083b430304ef0ddbf1bf",
+                "sha256:573ccf39bd4ed2820a8cfc07a65cd67abdc83d017a40335269276e486e489697"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.9' and python_version < '4.0'",
-            "version": "==0.2.5"
+            "version": "==0.3.1"
         },
         "langchain-ollama": {
             "hashes": [
