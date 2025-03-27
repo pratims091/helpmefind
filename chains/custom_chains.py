@@ -45,7 +45,9 @@ def get_summarized_review_chain() -> RunnableSequence:
     prompt_template = PromptTemplate(
         input_variables=["information"],
         template=template,
-        partial_variables={"format_instructions": places_parser.get_format_instructions()},
+        partial_variables={
+            "format_instructions": places_parser.get_format_instructions()
+        },
     )
 
     chain = prompt_template | llm
@@ -86,7 +88,9 @@ async def get_summarized_review_chain_async(input_data):
     prompt_template = PromptTemplate(
         input_variables=["information"],
         template=template,
-        partial_variables={"format_instructions": places_parser.get_format_instructions()},
+        partial_variables={
+            "format_instructions": places_parser.get_format_instructions()
+        },
     )
 
     prompt = prompt_template.format(information=input_data["information"])

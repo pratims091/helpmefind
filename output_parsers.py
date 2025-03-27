@@ -14,7 +14,9 @@ class Place(BaseModel):
     rating: float = Field(description="The rating of the place.")
     place_id: str = Field(description="The Google Maps place ID.")
     reviewSummary: str = Field(description="A summary of the reviews for the place.")
-    images: List[str] = Field(description="A list of unique image URLs associated with the place.")
+    images: List[str] = Field(
+        description="A list of unique image URLs associated with the place."
+    )
     ratingCount: int = Field(description="User review count.")
 
 

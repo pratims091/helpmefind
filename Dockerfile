@@ -10,4 +10,8 @@ COPY . .
 
 RUN pip install gunicorn
 
-CMD gunicorn --bind 0.0.0.0:$PORT app:app
+COPY docker-entrypoint.sh .
+
+RUN chmod +x docker-entrypoint.sh
+
+CMD ["./docker-entrypoint.sh"]

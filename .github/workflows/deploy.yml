@@ -1,8 +1,8 @@
-name: Deploy to Heroku
+name: Deploy to DigitalOcean Droplet
 
 on:
   workflow_run:
-    workflows: ["lint"]  # Name of the lint workflow
+    workflows: ["lint"]
     types:
       - completed
     branches:
@@ -14,22 +14,118 @@ jobs:
     environment:
       name: prod
     env:
-      HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-      HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
+      DIGITALOCEAN_ACCESS_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      PORT: ${{ secrets.PORT }}
+      GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+      GOOGLE_PLACES_BASE_URL: ${{ secrets.GOOGLE_PLACES_BASE_URL }}
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      LLM_TO_USE: ${{ secrets.LLM_TO_USE }}
+      LLM_MODEL: ${{ secrets.LLM_MODEL }}
+      LANGSMITH_TRACING: ${{ secrets.LANGSMITH_TRACING }}
+      LANGSMITH_ENDPOINT: ${{ secrets.LANGSMITH_ENDPOINT }}
+      LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
+      LANGSMITH_PROJECT: ${{ secrets.LANGSMITH_PROJECT }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_PAT: ${{ secrets.DOCKERHUB_PAT }}
+      DROPLET_IP: ${{ secrets.DROPLET_IP }}
+      DROPLET_USER: ${{ secrets.DROPLET_USER }}
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      APP_PATH: ${{ secrets.APP_PATH }}
+      MOCK_API_REQUESTS: ${{ secrets.MOCK_API_REQUESTS }}
+      FLASK_DEBUG: ${{ secrets.FLASK_DEBUG }}
 
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
-      - uses: actions/checkout@v3
-      - name: Install Heroku CLI
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ env.DOCKERHUB_PAT }}
+
+      - name: Create .env file
         run: |
-          curl https://cli-assets.heroku.com/install.sh | sh
-      - name: Install Heroku CLI
+          echo "PORT=${{ env.PORT }}" > .env
+          echo "GOOGLE_PLACES_API_KEY=${{ env.GOOGLE_PLACES_API_KEY }}" >> .env
+          echo "GOOGLE_PLACES_BASE_URL=${{ env.GOOGLE_PLACES_BASE_URL }}" >> .env
+          echo "GOOGLE_API_KEY=${{ env.GOOGLE_API_KEY }}" >> .env
+          echo "GROQ_API_KEY=${{ env.GROQ_API_KEY }}" >> .env
+          echo "LLM_TO_USE=${{ env.LLM_TO_USE }}" >> .env
+          echo "LLM_MODEL=${{ env.LLM_MODEL }}" >> .env
+          echo "LANGSMITH_TRACING=${{ env.LANGSMITH_TRACING }}" >> .env
+          echo "LANGSMITH_ENDPOINT=${{ env.LANGSMITH_ENDPOINT }}" >> .env
+          echo "LANGSMITH_API_KEY=${{ env.LANGSMITH_API_KEY }}" >> .env
+          echo "LANGSMITH_PROJECT=${{ env.LANGSMITH_PROJECT }}" >> .env
+          echo "DOCKERHUB_USERNAME=${{ env.DOCKERHUB_USERNAME }}" >> .env
+          echo "MOCK_API_REQUESTS=${{ env.MOCK_API_REQUESTS }}" >> .env
+          echo "FLASK_DEBUG=${{ env.FLASK_DEBUG }}" >> .env
+
+      - name: Set environment variables
         run: |
-          heroku container:login
-      - name: Build and push Docker image to Heroku
+          echo "IMAGE_TAG=${GITHUB_SHA::8}" >> $GITHUB_ENV
+
+      - name: Build and push Docker images
         run: |
-          docker build -t registry.heroku.com/${{ env.HEROKU_APP_NAME }}/web .
-          heroku container:push -a ${{ env.HEROKU_APP_NAME }} web
-      - name: Release Heroku app
-        run: |
-          heroku container:release -a ${{ env.HEROKU_APP_NAME }} web
+          # Build the Docker image with a specific tag
+          docker build -t ${{ env.DOCKERHUB_USERNAME }}/helpmefind:${IMAGE_TAG} .
+
+          # Tag the image as latest
+          docker tag ${{ env.DOCKERHUB_USERNAME }}/helpmefind:${IMAGE_TAG} ${{ env.DOCKERHUB_USERNAME }}/helpmefind:latest
+
+          # Push both tags to Docker Hub
+          docker push ${{ env.DOCKERHUB_USERNAME }}/helpmefind:${IMAGE_TAG}
+          docker push ${{ env.DOCKERHUB_USERNAME }}/helpmefind:latest
+
+      - name: Copy .env file to Droplet
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ env.DROPLET_IP }}
+          username: ${{ env.DROPLET_USER }}
+          key: ${{ env.SSH_PRIVATE_KEY }}
+          source: ".env"
+          target: "${{ env.APP_PATH }}"
+
+      - name: Deploy to Droplet via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ env.DROPLET_IP }}
+          username: ${{ env.DROPLET_USER }}
+          key: ${{ env.SSH_PRIVATE_KEY }}
+          script: |
+            cd "${{ env.APP_PATH }}"
+
+            # Login to Docker Hub
+            echo "Logging in to Docker Hub..."
+            docker login -u ${{ env.DOCKERHUB_USERNAME }} -p ${{ env.DOCKERHUB_PAT }}
+
+            # Pull latest image
+            echo "Pulling latest Docker image..."
+            docker pull ${{ env.DOCKERHUB_USERNAME }}/helpmefind:latest
+
+            # Stop and remove existing container if it exists
+            echo "Stopping existing container if running..."
+            docker stop helpmefind-app || true
+            docker rm helpmefind-app || true
+
+            # Run the new container with environment variables from .env file
+            echo "Starting new container with recommended configuration..."
+            docker run -d \
+              --name helpmefind-app \
+              --restart unless-stopped \
+              -p ${{ env.PORT }}:${{ env.PORT }} \
+              --env-file .env \
+              ${{ env.DOCKERHUB_USERNAME }}/helpmefind:latest
+
+            # Verify container is running
+            echo "Verifying container status..."
+            docker ps | grep helpmefind-app
+
+            # Remove any dangling images to free up space
+            echo "Cleaning up unused images..."
+            docker image prune -f

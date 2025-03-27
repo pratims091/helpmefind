@@ -15,7 +15,9 @@ load_dotenv()
 async def helpmefind(query: str, location: str) -> Places:
     """Find places based on a query and location."""
     places = await search(query=query, location=location)
-    summarized_reviews = await get_summarized_review_chain_async({"information": places})
+    summarized_reviews = await get_summarized_review_chain_async(
+        {"information": places}
+    )
 
     res: Places = summarized_reviews
 

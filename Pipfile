@@ -25,6 +25,7 @@ ruff = "*"
 pre-commit = "*"
 
 [scripts]
+start = "python app.py"
 lint = "ruff check ."
 format = "ruff format ."
 check = "ruff check --fix ."
