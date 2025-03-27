@@ -9,6 +9,7 @@ from datetime import datetime
 from functools import wraps
 
 import nest_asyncio
+from diskcache import Cache
 from flask import Flask, jsonify, render_template, request
 
 from main import helpmefind
@@ -19,8 +20,8 @@ app = Flask(__name__)
 # Set a secret key for session management
 app.secret_key = secrets.token_hex(16)
 
-# Dictionary to store temporary CAPTCHA challenges and their answers
-captcha_store = {}
+# Use disk-based cache for CAPTCHA storage instead of in-memory dictionary
+captcha_cache = Cache("cache/captcha")
 
 # Configure logging
 logging.basicConfig(level=logging.ERROR)
@@ -44,30 +45,19 @@ def generate_captcha():
     challenge = f"{num1} {operator} {num2}"
     captcha_id = secrets.token_hex(8)
 
-    # Store the challenge and answer with an ID
-    captcha_store[captcha_id] = {
-        "challenge": challenge,
-        "answer": answer,
-        "created_at": datetime.now(),
-    }
-
-    # Clean up old captchas periodically
-    clean_old_captchas()
+    # Store the challenge and answer with an ID in disk cache
+    # Set expiration to 10 minutes (600 seconds)
+    captcha_cache.set(
+        captcha_id,
+        {
+            "challenge": challenge,
+            "answer": answer,
+            "created_at": datetime.now().isoformat(),
+        },
+        expire=600,
+    )
 
     return captcha_id, challenge
-
-
-# Clean up captchas older than 10 minutes
-def clean_old_captchas():
-    """Clean up captchas older than 10 minutes."""
-    now = datetime.now()
-    expired_ids = [
-        captcha_id
-        for captcha_id, data in captcha_store.items()
-        if (now - data["created_at"]).total_seconds() > 600
-    ]
-    for captcha_id in expired_ids:
-        captcha_store.pop(captcha_id, None)
 
 
 # Endpoint to get a new CAPTCHA
@@ -94,14 +84,15 @@ def require_captcha(f):
             return jsonify({"message": "CAPTCHA validation required"}), 403
 
         # Check if the captcha_id is valid
-        if captcha_id not in captcha_store:
+        captcha_data = captcha_cache.get(captcha_id)
+        if captcha_data is None:
             return jsonify({"message": "Invalid or expired CAPTCHA"}), 403
 
         # Check if the answer is correct
-        correct_answer = captcha_store[captcha_id]["answer"]
+        correct_answer = captcha_data["answer"]
 
         # Remove the used CAPTCHA regardless of whether answer is correct
-        captcha_store.pop(captcha_id, None)
+        captcha_cache.delete(captcha_id)
 
         if user_answer != correct_answer:
             return jsonify({"message": "Incorrect CAPTCHA answer"}), 403

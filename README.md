@@ -218,9 +218,13 @@ Custom tool that interfaces with Google Places API to retrieve location informat
 
 Converts raw LLM outputs into structured data formats for the application.
 
+### CAPTCHA System (`app.py`)
+
+Protects the API from abuse with a simple math-based CAPTCHA challenge. Uses disk-based caching to ensure reliability in multi-worker production environments.
+
 ### Caching System (`cache/`)
 
-Reduces API calls by storing previous queries and responses in a local SQLite database.
+Reduces API calls by storing previous queries and responses in a local SQLite database. Also used for CAPTCHA storage to ensure consistency across application instances.
 
 ----------
 
