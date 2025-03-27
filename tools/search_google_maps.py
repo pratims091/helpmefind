@@ -106,7 +106,7 @@ async def inject_images_to_places(content: str) -> str:
 async def _search_google_maps_async(search: str) -> List[Dict[str, Any]]:
     """Search for places on Google Maps based on a query and location."""
     query, location = search.split("|")
-    lat, long = location.split(",")
+    lat, lng = location.split(",")
 
     mock = os.environ.get("MOCK_API_REQUESTS", "True").lower() in ("true", "1", "t")
 
@@ -120,7 +120,7 @@ async def _search_google_maps_async(search: str) -> List[Dict[str, Any]]:
         "pageSize": 10,
         "locationBias": {
             "circle": {
-                "center": {"latitude": float(lat), "longitude": float(long)},
+                "center": {"latitude": float(lat), "longitude": float(lng)},
                 "radius": 500,
             }
         },
