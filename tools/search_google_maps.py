@@ -105,8 +105,34 @@ async def inject_images_to_places(content: str) -> str:
 
 async def _search_google_maps_async(search: str) -> List[Dict[str, Any]]:
     """Search for places on Google Maps based on a query and location."""
-    query, location = search.split("|")
-    lat, lng = location.split(",")
+    # Handle different input formats
+    if "|" in search:
+        # Format: "search query | location"
+        query, location = search.split("|", 1)
+    else:
+        # Try to extract query and location from the input
+        print(f"Warning: Input format not as expected. Input: {search}")
+        # Default to empty query and location if we can't parse
+        query, location = "", ""
+
+    # Clean up query and location
+    query = query.strip()
+    location = location.strip()
+
+    # Split location into lat and lng if it contains a comma
+    if "," in location:
+        try:
+            lat, lng = location.split(",", 1)
+            lat = lat.strip()
+            lng = lng.strip()
+        except ValueError:
+            print(
+                f"Error: Could not split location into lat and lng. Location: {location}"
+            )
+            raise ValueError(f"Invalid location format: {location}")
+    else:
+        print(f"Error: Location does not contain a comma. Location: {location}")
+        raise ValueError(f"Invalid location format: {location}")
 
     mock = os.environ.get("MOCK_API_REQUESTS", "True").lower() in ("true", "1", "t")
 
